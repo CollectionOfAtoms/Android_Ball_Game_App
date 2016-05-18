@@ -48,7 +48,7 @@ public class TheGame extends GameThread{
     //Set up arrays to hold collision positions
       //Will use these to draw a trail behind the ball
     private int trailSize= 50;
-    private int collisionCounter; //variable to keep track of number of total collisions
+    private int stepCounter; //variable to keep track of number of total time steps since game start
     private float[] xTrails = new float[trailSize];
     private float[] yTrails = new float[trailSize];
 
@@ -130,7 +130,7 @@ public class TheGame extends GameThread{
         trailPaint.setStrokeWidth(5);
 
         //Initialize trail counter and set initial trail
-        collisionCounter = 0;
+        stepCounter = 0;
         xTrails[0] = mBallX;
         yTrails[0] = mBallY;
 
@@ -242,10 +242,10 @@ public class TheGame extends GameThread{
 
         //Save the current position of the ball to draw its trail.
 
-        collisionCounter++;
+        stepCounter++;
 
-        xTrails[collisionCounter%trailSize] = mBallX;
-        yTrails[collisionCounter%trailSize] = mBallY;
+        xTrails[stepCounter%trailSize] = mBallX;
+        yTrails[stepCounter%trailSize] = mBallY;
 
 
     }
@@ -254,24 +254,30 @@ public class TheGame extends GameThread{
     public void drawTrail(Canvas canvas){
 
         trailPaint.setAlpha(0); //set paint to be completely transparent
-        if( collisionCounter < trailSize){  //If buffer of previous ball locations is not yet full
-            for (int i = 0; i < collisionCounter; i++) {
-                canvas.drawLine(xTrails[i], yTrails[i], xTrails[i + 1], yTrails[i + 1], trailPaint); //draw previous collisions
-                trailPaint.setAlpha(trailPaint.getAlpha()+(255/collisionCounter));
+
+        if( stepCounter < trailSize ){  //If buffer of previous ball locations is not yet full
+            for (int i = 0; i < stepCounter; i++) {   //For the part of the buffer that is full
+                canvas.drawLine(xTrails[i], yTrails[i], xTrails[i + 1], yTrails[i + 1], trailPaint); //draw the line
+                trailPaint.setAlpha(trailPaint.getAlpha()+(255/stepCounter));  //Alpha makes line become more solid closer to ball
             }
-            canvas.drawLine(xTrails[collisionCounter], yTrails[collisionCounter],mBallX,mBallY, trailPaint);
+            //Draw final portion connecting to ball
+            canvas.drawLine(xTrails[stepCounter], yTrails[stepCounter],mBallX,mBallY, trailPaint);
         }
         else
         {
-            int drawn=1;
+            int drawn=1; //counter to keep track of trail array indexes that have already been drawn
             while(drawn < trailSize){
-                int i = (collisionCounter+drawn);
+                int i = (stepCounter+drawn); //current index
+
+                //Draw the trail from the buffers
                 canvas.drawLine(xTrails[(i)%trailSize],yTrails[(i)%trailSize],
                         xTrails[(i+1)%trailSize],yTrails[(i+1)%trailSize],trailPaint);
+                //Increment alpha appropriately to make line more solid
                 trailPaint.setAlpha(trailPaint.getAlpha()+(255/trailSize));
                 drawn++;
             }
-            canvas.drawLine(xTrails[collisionCounter%trailSize],yTrails[collisionCounter%trailSize], mBallX, mBallY, trailPaint);
+            //Draw final portion connecting to ball
+            canvas.drawLine(xTrails[stepCounter%trailSize],yTrails[stepCounter%trailSize], mBallX, mBallY, trailPaint);
         }
     }
 
@@ -296,24 +302,6 @@ public class TheGame extends GameThread{
             //Copmonents of proper collision derived from long derivation
             mBallSpeedX = (float)( (-1/Math.pow(D,2)) * ( (Math.pow(Dx,2)-Math.pow(Dy,2))*Vx - (2.*Dx*Dy*Vy) ) );
             mBallSpeedY = (float)( (1/Math.pow(D,2)) * ( (Math.pow(Dy,2)-Math.pow(Dx,2))*Vy - (2.*Dx*Dy*Vx) ) );
-
-
-            //Old method of handling collisions with faulty physics
-            /*
-            //Calculate absolute velocity of ball
-            float ballSpeed = calcMagnitude(mBallSpeedX,mBallSpeedY);
-
-            //Set Velocities in correct direction
-            mBallSpeedX = mBallX - pos2x;
-            mBallSpeedY = mBallY - pos2y;
-
-            float newBallSpeed = calcMagnitude(mBallSpeedX, mBallSpeedY);
-
-            //Adjust velocities to conserve total speed
-            mBallSpeedX *= (ballSpeed / newBallSpeed);
-            mBallSpeedY *= (ballSpeed / newBallSpeed);
-            */
-
 
             //update game score with
             updateScore(pointVal);
