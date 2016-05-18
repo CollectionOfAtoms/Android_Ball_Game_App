@@ -357,6 +357,15 @@ public abstract class GameThread extends Thread {
         float distance = (float)Math.sqrt( Math.pow( (x1-x2) ,2) + Math.pow( (y1-y2) , 2) );
         return distance;
     }
+
+    //Helper function to calculate the mean of an array
+    public static float mean(float[] m) {
+        float sum = 0;
+        for (int i = 0; i < m.length; i++) {
+            sum += m[i];
+        }
+        return sum / m.length;
+    }
 	
 }
 

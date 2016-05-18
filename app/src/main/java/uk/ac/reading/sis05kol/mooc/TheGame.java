@@ -41,6 +41,7 @@ public class TheGame extends GameThread{
     private float smileyCollisionDistance;
     private float sadCollisionDistance;
 
+
     //Set up paint and color for ball trail
     Paint trailPaint = new Paint();
 
@@ -84,9 +85,17 @@ public class TheGame extends GameThread{
     //This is run before a new game (also after an old game)
     @Override
     public void setupBeginning() {
-        //Initialise speeds
-        mBallSpeedX = mCanvasWidth  / 3 ;
-        mBallSpeedY = mCanvasHeight / 3 ;
+        //Initialize speed
+        float initialSpeed = calcMagnitude(mCanvasWidth / 3,mCanvasHeight /3);
+
+        //Set ball motion in random direction down the screen
+        mBallSpeedX = (float)(Math.random()*.6 - .3); //random number between -.3 and .3
+        mBallSpeedY = 1;
+
+        //preserve original speed
+        float currentSpeed = calcMagnitude(mBallSpeedX,mBallSpeedY);
+        mBallSpeedX *= initialSpeed/currentSpeed;
+        mBallSpeedY *= initialSpeed/currentSpeed;
 
         //Place the ball in the middle of the screen.
         //mBall.Width() and mBall.getHeight() gives us the height and width of the image of the ball
@@ -97,10 +106,6 @@ public class TheGame extends GameThread{
         mPaddleX = mCanvasWidth / 2;
         mPaddleSpeedX = 0;
 
-        //Set up the position of the smiley ball
-        mSmileyX = mCanvasWidth /2;
-        mSmileyY = mCanvasHeight / 4;
-
         //Set up the position of the sad balls
             //Place all SadBalls forming a pyramid underneath the SmileyBall
         mSadBallX[0] = mCanvasWidth / 3;
@@ -109,6 +114,11 @@ public class TheGame extends GameThread{
         mSadBallY[1] = mCanvasHeight / 3;
         mSadBallX[2] = mCanvasWidth / 2;
         mSadBallY[2] = mCanvasHeight / 5;
+
+        //Set up the position of the smiley ball
+        //currently set to be the center of the sad balls
+        mSmileyX = mean(mSadBallX);
+        mSmileyY = mean(mSadBallY);
 
         //Set up collision distance between ball and paddle
         paddleCollisionDistance = calcCollisionDistance(mBall, mPaddle);
@@ -147,7 +157,7 @@ public class TheGame extends GameThread{
         canvas.drawBitmap(mPaddle, mPaddleX - mPaddle.getWidth() / 2, mCanvasHeight - mPaddle.getHeight() / 2, null);
 
         //draw the smiley ball
-        canvas.drawBitmap(mSmiley, mSmileyX - mSmiley.getWidth() /2, mSmileyY - mSmiley.getHeight()/2, null);
+        canvas.drawBitmap(mSmiley, mSmileyX - mSmiley.getWidth()/2, mSmileyY - mSmiley.getHeight()/2, null);
 
         //draw the sad balls
         //Loop through all SadBall
@@ -194,13 +204,20 @@ public class TheGame extends GameThread{
     @Override
     protected void updateGame(float secondsElapsed) {
 
+        //Collisions also update total speed of the ball based on points awarded.
         //handle collision with Paddle
-        handleRoundCollision(mPaddleX,mCanvasHeight,paddleCollisionDistance,0);
-
-        handleRoundCollision(mSmileyX,mSmileyY,smileyCollisionDistance,1);
-
-        for(int i = 0; i<mSadBallX.length; i++ ){
-            handleRoundCollision(mSadBallX[i],mSadBallY[i],sadCollisionDistance,0);
+        if (mBallY >= mCanvasHeight - mPaddle.getHeight()/2) {
+            handleRoundCollision(mPaddleX, mCanvasHeight, paddleCollisionDistance, 0);
+        }
+        //handle collision with Smiley
+        if (mBallY <= mSmileyY + mSmiley.getHeight()/2) {
+            handleRoundCollision(mSmileyX, mSmileyY, smileyCollisionDistance, 1);
+        }
+        //handle collsision with Sad Balls
+        if (mBallY <= mSadBallY[0] + mSadBall.getHeight()/2){
+            for(int i = 0; i<mSadBallX.length; i++ ){
+                handleRoundCollision(mSadBallX[i],mSadBallY[i],sadCollisionDistance,0);
+            }
         }
 
 
@@ -217,6 +234,7 @@ public class TheGame extends GameThread{
 
         mPaddleX = mPaddleX + secondsElapsed * mPaddleSpeedX;
 
+
         // Lose if ball hits bottom of screen
         if(mBallY >= mCanvasHeight){
             setState(GameThread.STATE_LOSE);
@@ -232,6 +250,7 @@ public class TheGame extends GameThread{
 
     }
 
+    // Function to draw the trail of the ball
     public void drawTrail(Canvas canvas){
 
         trailPaint.setAlpha(0); //set paint to be completely transparent
@@ -256,15 +275,33 @@ public class TheGame extends GameThread{
         }
     }
 
-    public void handleRoundCollision(float pos2x, float pos2y, float collisionDistance, int pointVal){
+    //Function to handle collision between round cental ball and a round object
+    private void handleRoundCollision(float pos2x, float pos2y, float collisionDistance, int pointVal){
 
-        float objDistance;
+        //Distance between main ball and other objects
+        float D = calcDistance(mBallX,mBallY,pos2x,pos2y);
+        if(D <= collisionDistance){
 
-        objDistance = calcDistance(mBallX,mBallY,pos2x,pos2y);
-        if(objDistance < collisionDistance){
+
             //calculate speed of the ball to conserve total speed
-            float ballSpeed = calcMagnitude(mBallSpeedX, mBallSpeedY);
+            float Dx = (mBallX-pos2x); //Separation between ball and object in x direction
+            float Dy = (mBallY-pos2y); //Separation between ball and object in y direction
+            float Vx = (mBallSpeedX);  //Temporarily save current speeds
+            float Vy = -(mBallSpeedY);
 
+            // reposition the ball to prevent overlap
+            mBallX = pos2x - (collisionDistance * (-Dx/D) + (float).1); //-Dx/D = sin(theta)
+            mBallY = pos2y + (collisionDistance * ( Dy/D) + (float).1); // Dy/D = cos(theta)
+
+            //Copmonents of proper collision derived from long derivation
+            mBallSpeedX = (float)( (-1/Math.pow(D,2)) * ( (Math.pow(Dx,2)-Math.pow(Dy,2))*Vx - (2.*Dx*Dy*Vy) ) );
+            mBallSpeedY = (float)( (1/Math.pow(D,2)) * ( (Math.pow(Dy,2)-Math.pow(Dx,2))*Vy - (2.*Dx*Dy*Vx) ) );
+
+
+            //Old method of handling collisions with faulty physics
+            /*
+            //Calculate absolute velocity of ball
+            float ballSpeed = calcMagnitude(mBallSpeedX,mBallSpeedY);
 
             //Set Velocities in correct direction
             mBallSpeedX = mBallX - pos2x;
@@ -275,12 +312,26 @@ public class TheGame extends GameThread{
             //Adjust velocities to conserve total speed
             mBallSpeedX *= (ballSpeed / newBallSpeed);
             mBallSpeedY *= (ballSpeed / newBallSpeed);
+            */
 
-            //update score with
+
+            //update game score with
             updateScore(pointVal);
+            //adjust ball speed as a function of point value
+            if (pointVal!=0){
+                updateSpeed(pointVal);
+            }
 
 
         }
+    }
+
+    private void updateSpeed(int pointVal){
+        float CurrentSpeed = calcMagnitude(mBallSpeedX,mBallSpeedY);
+        float newSpeed = CurrentSpeed + pointVal * (CurrentSpeed/10);
+        mBallSpeedX *= newSpeed/CurrentSpeed;
+        mBallSpeedY *= newSpeed/CurrentSpeed;
+
     }
 }
 
