@@ -218,6 +218,8 @@ public class TheGame extends GameThread{
     }
 
 
+    /*
+    //Method made obsolete by addition of swiping
 
     //This is run whenever the phone moves around its axises
     @Override
@@ -235,6 +237,7 @@ public class TheGame extends GameThread{
         }
 
     }
+    */
 
 
     //This is run just before the game "scenario" is printed on the screen
