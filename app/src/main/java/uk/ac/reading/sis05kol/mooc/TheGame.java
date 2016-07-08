@@ -6,7 +6,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Color;
-import android.
+import android.view.MotionEvent;
+
 
 
 public class TheGame extends GameThread{
@@ -52,7 +53,6 @@ public class TheGame extends GameThread{
     private int stepCounter; //variable to keep track of number of total time steps since game start
     private float[] xTrails = new float[trailSize];
     private float[] yTrails = new float[trailSize];
-
 
 
 
@@ -182,32 +182,42 @@ public class TheGame extends GameThread{
 		mPaddleX = x;
 	}
 
+
     @Override
-    public boolean onTouchEvent(MotionEvent event){
+    public boolean onTouch(MotionEvent event) {
 
-        int action = MotionEventCompat.getActionMasked(event);
+        //Enable finger swiping to move paddle when game is running
+        if (mMode == STATE_RUNNING) {
 
-        switch(action) {
-            case (MotionEvent.ACTION_DOWN) :
-                Log.d(DEBUG_TAG,"Action was DOWN");
-                return true;
-            case (MotionEvent.ACTION_MOVE) :
-                Log.d(DEBUG_TAG,"Action was MOVE");
-                return true;
-            case (MotionEvent.ACTION_UP) :
-                Log.d(DEBUG_TAG,"Action was UP");
-                return true;
-            case (MotionEvent.ACTION_CANCEL) :
-                Log.d(DEBUG_TAG,"Action was CANCEL");
-                return true;
-            case (MotionEvent.ACTION_OUTSIDE) :
-                Log.d(DEBUG_TAG,"Movement occurred outside bounds " +
-                        "of current screen element");
-                return true;
-            default :
-                return super.onTouchEvent(event);
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN: {
+                    //Move paddle to finger x-position when screen touched
+                    mPaddleX = event.getX();
+                    return true;
+                }
+                case MotionEvent.ACTION_MOVE: {
+                    //If finger X position differs from current paddle position by >3 pixels, move paddle to current finger position
+                    if (event.getX() < mPaddleX - 3 || event.getX() > mPaddleX + 3)
+                        mPaddleX = event.getX();
+                    return true;
+                }
+                case MotionEvent.ACTION_UP: {
+                    return true;
+                }
+                case MotionEvent.ACTION_CANCEL: {
+                    return true;
+                }
+                default:
+                    return super.onTouch(event);
+
+
+            }
         }
+        //if game is not in running state, then do previous actions
+        else return super.onTouch(event);
     }
+
+
 
     //This is run whenever the phone moves around its axises
     @Override
